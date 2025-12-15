@@ -1,9 +1,30 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Calendar, ArrowRight, Sparkles } from "lucide-react";
 
 export default function ConfirmationPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [details, setDetails] = useState<any>(null);
+
+  useEffect(() => {
+    // Expecting state to be passed from the previous page
+    if (location.state) {
+      setDetails(location.state);
+    }
+  }, [location]);
+
+  if (!details) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+            <h2 className="text-lg font-semibold">No booking details found</h2>
+            <Button onClick={() => navigate("/dashboard")} className="mt-4">Back to Dashboard</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -20,28 +41,28 @@ export default function ConfirmationPage() {
           Interview Scheduled!
         </h1>
         <p className="text-muted-foreground mb-8">
-          The interview with Alex Chen has been confirmed. A calendar invite has been sent to both parties.
+          The interview with {details.candidateName} has been confirmed.
         </p>
 
         {/* Interview details */}
         <div className="bg-card rounded-xl border border-border p-6 mb-8 text-left">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-sm font-semibold text-accent-foreground">
-              AC
+              {details.candidateInitials || "C"}
             </div>
             <div>
-              <p className="font-medium text-foreground">Alex Chen</p>
-              <p className="text-sm text-muted-foreground">Senior Frontend Engineer</p>
+              <p className="font-medium text-foreground">{details.candidateName}</p>
+              <p className="text-sm text-muted-foreground">{details.role}</p>
             </div>
           </div>
           <div className="space-y-3 pt-4 border-t border-border">
             <div className="flex items-center gap-3 text-sm">
               <Calendar className="w-4 h-4 text-muted-foreground" />
-              <span className="text-foreground">Tomorrow, January 16th at 10:00 AM</span>
+              <span className="text-foreground">{details.date} at {details.time}</span>
             </div>
             <div className="flex items-center gap-3 text-sm">
               <Sparkles className="w-4 h-4 text-muted-foreground" />
-              <span className="text-foreground">30 minute video call via Google Meet</span>
+              <span className="text-foreground">{details.duration || "30"} minute video call</span>
             </div>
           </div>
         </div>

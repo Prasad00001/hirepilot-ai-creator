@@ -1,57 +1,37 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
-const candidates = [
-  { 
-    id: 1, 
-    name: "Alex Chen", 
-    email: "alex@email.com",
-    role: "Senior Frontend Engineer",
-    score: 94, 
-    status: "shortlisted",
-    avatar: "AC"
-  },
-  { 
-    id: 2, 
-    name: "Sarah Kim", 
-    email: "sarah@email.com",
-    role: "Senior Frontend Engineer",
-    score: 88, 
-    status: "interviewing",
-    avatar: "SK"
-  },
-  { 
-    id: 3, 
-    name: "Michael Brown", 
-    email: "michael@email.com",
-    role: "Product Designer",
-    score: 82, 
-    status: "shortlisted",
-    avatar: "MB"
-  },
-  { 
-    id: 4, 
-    name: "Emily Davis", 
-    email: "emily@email.com",
-    role: "Backend Engineer",
-    score: 75, 
-    status: "screening",
-    avatar: "ED"
-  },
-  { 
-    id: 5, 
-    name: "James Wilson", 
-    email: "james@email.com",
-    role: "Senior Frontend Engineer",
-    score: 91, 
-    status: "offer",
-    avatar: "JW"
-  },
-];
+interface Candidate {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  score: number;
+  status: string;
+  avatar: string;
+}
 
 export default function CandidatesPage() {
   const navigate = useNavigate();
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // TODO: Fetch candidates from backend
+    const fetchCandidates = async () => {
+      try {
+        // const res = await fetch('/api/candidates');
+        // setCandidates(await res.json());
+        setIsLoading(false);
+      } catch (error) {
+        console.error(error);
+        setIsLoading(false);
+      }
+    };
+    fetchCandidates();
+  }, []);
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return "score-high";
@@ -60,21 +40,21 @@ export default function CandidatesPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const styles = {
+    const styles: Record<string, string> = {
       screening: "bg-muted text-muted-foreground",
       shortlisted: "bg-amber-100 text-amber-700",
       interviewing: "bg-primary/10 text-primary",
       offer: "bg-emerald-100 text-emerald-700",
     };
-    const labels = {
+    const labels: Record<string, string> = {
       screening: "Screening",
       shortlisted: "Shortlisted",
       interviewing: "Interviewing",
       offer: "Offer Sent",
     };
     return (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels]}
+      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${styles[status] || styles.screening}`}>
+        {labels[status] || status}
       </span>
     );
   };
@@ -106,50 +86,62 @@ export default function CandidatesPage() {
       </div>
 
       {/* Candidates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {candidates.map((candidate) => (
-          <div 
-            key={candidate.id}
-            onClick={() => navigate(`/candidates/${candidate.id}`)}
-            className="bg-card rounded-xl border border-border p-5 card-hover cursor-pointer"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-sm font-semibold text-accent-foreground">
-                  {candidate.avatar}
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : candidates.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          No candidates found.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {candidates.map((candidate) => (
+            <div 
+              key={candidate.id}
+              onClick={() => navigate(`/candidates/${candidate.id}`)}
+              className="bg-card rounded-xl border border-border p-5 card-hover cursor-pointer"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-sm font-semibold text-accent-foreground">
+                    {candidate.avatar}
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-foreground">{candidate.name}</h3>
+                    <p className="text-sm text-muted-foreground">{candidate.email}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground">{candidate.name}</h3>
-                  <p className="text-sm text-muted-foreground">{candidate.email}</p>
+                <div className={`score-badge ${getScoreColor(candidate.score)}`}>
+                  {candidate.score}
                 </div>
               </div>
-              <div className={`score-badge ${getScoreColor(candidate.score)}`}>
-                {candidate.score}
+              <p className="text-sm text-muted-foreground mb-4">{candidate.role}</p>
+              <div className="flex items-center justify-between">
+                {getStatusBadge(candidate.status)}
+                <Button variant="ghost" size="sm">View Profile</Button>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">{candidate.role}</p>
-            <div className="flex items-center justify-between">
-              {getStatusBadge(candidate.status)}
-              <Button variant="ghost" size="sm">View Profile</Button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Pagination */}
-      <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-        <p className="text-sm text-muted-foreground">
-          Showing 1-5 of 12 candidates
-        </p>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" disabled>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="icon">
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+      {candidates.length > 0 && (
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+          <p className="text-sm text-muted-foreground">
+            Showing results
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" disabled>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

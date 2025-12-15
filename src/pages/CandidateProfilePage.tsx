@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -9,9 +9,9 @@ import {
   MapPin,
   FileText,
   Star,
-  CheckCircle2,
   XCircle,
-  Briefcase
+  Briefcase,
+  Loader2
 } from "lucide-react";
 import {
   Sheet,
@@ -20,47 +20,69 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-const candidate = {
-  id: 1,
-  name: "Alex Chen",
-  email: "alex.chen@email.com",
-  phone: "+1 (555) 123-4567",
-  location: "San Francisco, CA",
-  score: 94,
-  appliedFor: "Senior Frontend Engineer",
-  experience: "5+ years",
-  education: "BS Computer Science, Stanford University",
-  summary: "Experienced frontend engineer with a passion for building beautiful, performant web applications. Strong expertise in React ecosystem and modern JavaScript.",
-  skills: [
-    { name: "React", level: 95 },
-    { name: "TypeScript", level: 90 },
-    { name: "Node.js", level: 85 },
-    { name: "CSS/Tailwind", level: 92 },
-    { name: "AWS", level: 75 },
-  ],
-  aiReasoning: [
-    { factor: "Technical Skills Match", score: 95, note: "Exceeds requirements in React and TypeScript" },
-    { factor: "Experience Level", score: 90, note: "5+ years matches senior role expectations" },
-    { factor: "Cultural Fit Signals", score: 92, note: "Startup experience, collaborative projects" },
-    { factor: "Growth Potential", score: 88, note: "Active learner, open source contributor" },
-  ],
-  experience_list: [
-    { title: "Senior Frontend Engineer", company: "TechStartup Inc", duration: "2021 - Present" },
-    { title: "Frontend Developer", company: "Innovation Labs", duration: "2019 - 2021" },
-    { title: "Junior Developer", company: "WebAgency Co", duration: "2017 - 2019" },
-  ]
-};
+// Define interface for proper type checking
+interface CandidateProfile {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  score: number;
+  appliedFor: string;
+  experience: string;
+  education: string;
+  summary: string;
+  skills: Array<{ name: string; level: number }>;
+  aiReasoning: Array<{ factor: string; score: number; note: string }>;
+  experience_list: Array<{ title: string; company: string; duration: string }>;
+}
 
 export default function CandidateProfilePage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [candidate, setCandidate] = useState<CandidateProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchCandidate = async () => {
+      try {
+        // TODO: Replace with real API call
+        // const res = await fetch(`/api/candidates/${id}`);
+        // const data = await res.json();
+        // setCandidate(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching candidate:", error);
+        setIsLoading(false);
+      }
+    };
+
+    if (id) fetchCandidate();
+  }, [id]);
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-emerald-600 bg-emerald-100";
     if (score >= 70) return "text-amber-600 bg-amber-100";
     return "text-red-600 bg-red-100";
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!candidate) {
+    return (
+      <div className="flex flex-col h-screen items-center justify-center gap-4">
+        <h2 className="text-xl font-semibold">Candidate not found</h2>
+        <Button onClick={() => navigate(-1)}>Go Back</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="content-container fade-in">

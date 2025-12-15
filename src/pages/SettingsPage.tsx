@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
-import { User, Bell, Lock, Palette, Sliders, Mail } from "lucide-react";
+import { User, Bell, Lock, Sliders, Mail, Loader2 } from "lucide-react";
 
 const settingsSections = [
   { id: "profile", label: "Profile", icon: User },
@@ -13,30 +13,68 @@ const settingsSections = [
   { id: "security", label: "Security", icon: Lock },
 ];
 
-const scoringCriteria = [
-  { id: "technical", label: "Technical Skills", weight: 35 },
-  { id: "experience", label: "Experience Level", weight: 25 },
-  { id: "cultural", label: "Cultural Fit", weight: 20 },
-  { id: "education", label: "Education", weight: 10 },
-  { id: "projects", label: "Projects & Portfolio", weight: 10 },
-];
-
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState("profile");
-  const [weights, setWeights] = useState(
-    scoringCriteria.reduce((acc, c) => ({ ...acc, [c.id]: c.weight }), {} as Record<string, number>)
-  );
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // State for form data
+  const [profile, setProfile] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    company: "",
+    avatarInitials: ""
+  });
+  
+  const [scoringWeights, setScoringWeights] = useState<Record<string, number>>({});
+  const [emailTemplates, setEmailTemplates] = useState({
+    invitation: "",
+    rejection: ""
+  });
 
-  const handleSave = () => {
+  useEffect(() => {
+    // Simulate fetching user settings
+    const fetchSettings = async () => {
+      try {
+        // const res = await fetch('/api/settings');
+        // const data = await res.json();
+        // setProfile(data.profile);
+        // setScoringWeights(data.scoring);
+        // setEmailTemplates(data.emails);
+        setIsLoading(false);
+      } catch (error) {
+        console.error(error);
+        setIsLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async () => {
     toast({
-      title: "Settings saved",
-      description: "Your preferences have been updated successfully.",
+      title: "Saving...",
+      description: "Updating your preferences.",
     });
+    // TODO: POST to API
+    setTimeout(() => {
+      toast({
+        title: "Settings saved",
+        description: "Your preferences have been updated successfully.",
+      });
+    }, 500);
   };
 
   const updateWeight = (id: string, value: number[]) => {
-    setWeights(prev => ({ ...prev, [id]: value[0] }));
+    setScoringWeights(prev => ({ ...prev, [id]: value[0] }));
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="content-container fade-in">
@@ -75,7 +113,7 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-4 pb-4 border-b border-border">
                   <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-xl font-semibold text-accent-foreground">
-                    SP
+                    {profile.avatarInitials || "?"}
                   </div>
                   <div>
                     <Button variant="outline" size="sm">Change Photo</Button>
@@ -86,7 +124,9 @@ export default function SettingsPage() {
                     <label className="text-sm font-medium text-foreground block mb-2">First Name</label>
                     <input
                       type="text"
-                      defaultValue="Sarah"
+                      value={profile.firstName}
+                      onChange={(e) => setProfile({...profile, firstName: e.target.value})}
+                      placeholder="Enter first name"
                       className="w-full h-10 px-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
@@ -94,7 +134,9 @@ export default function SettingsPage() {
                     <label className="text-sm font-medium text-foreground block mb-2">Last Name</label>
                     <input
                       type="text"
-                      defaultValue="Park"
+                      value={profile.lastName}
+                      onChange={(e) => setProfile({...profile, lastName: e.target.value})}
+                      placeholder="Enter last name"
                       className="w-full h-10 px-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
@@ -102,7 +144,9 @@ export default function SettingsPage() {
                     <label className="text-sm font-medium text-foreground block mb-2">Email</label>
                     <input
                       type="email"
-                      defaultValue="sarah.park@company.com"
+                      value={profile.email}
+                      onChange={(e) => setProfile({...profile, email: e.target.value})}
+                      placeholder="name@company.com"
                       className="w-full h-10 px-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
@@ -110,7 +154,9 @@ export default function SettingsPage() {
                     <label className="text-sm font-medium text-foreground block mb-2">Company</label>
                     <input
                       type="text"
-                      defaultValue="TechStartup Inc"
+                      value={profile.company}
+                      onChange={(e) => setProfile({...profile, company: e.target.value})}
+                      placeholder="Company Name"
                       className="w-full h-10 px-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
@@ -126,59 +172,29 @@ export default function SettingsPage() {
             <div className="bg-card rounded-xl border border-border p-6">
               <h2 className="text-lg font-semibold text-foreground mb-2">Scoring Criteria</h2>
               <p className="text-sm text-muted-foreground mb-6">
-                Adjust how the AI weights different factors when scoring candidates.
+                Adjust how the AI weights different factors.
               </p>
               <div className="space-y-6">
-                {scoringCriteria.map((criteria) => (
-                  <div key={criteria.id}>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-foreground">{criteria.label}</label>
-                      <span className="text-sm text-muted-foreground">{weights[criteria.id]}%</span>
+                {Object.keys(scoringWeights).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No scoring criteria loaded.</p>
+                ) : (
+                    Object.entries(scoringWeights).map(([key, weight]) => (
+                    <div key={key}>
+                        <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-foreground capitalize">{key}</label>
+                        <span className="text-sm text-muted-foreground">{weight}%</span>
+                        </div>
+                        <Slider
+                        value={[weight]}
+                        onValueChange={(value) => updateWeight(key, value)}
+                        max={100}
+                        min={0}
+                        step={5}
+                        className="w-full"
+                        />
                     </div>
-                    <Slider
-                      value={[weights[criteria.id]]}
-                      onValueChange={(value) => updateWeight(criteria.id, value)}
-                      max={50}
-                      min={5}
-                      step={5}
-                      className="w-full"
-                    />
-                  </div>
-                ))}
-                <div className="p-4 bg-accent rounded-lg">
-                  <p className="text-sm text-accent-foreground">
-                    <strong>Total:</strong> {Object.values(weights).reduce((a, b) => a + b, 0)}% 
-                    {Object.values(weights).reduce((a, b) => a + b, 0) !== 100 && (
-                      <span className="text-amber-600 ml-2">(Should equal 100%)</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="flex justify-end mt-6 pt-6 border-t border-border">
-                <Button onClick={handleSave}>Save Preferences</Button>
-              </div>
-            </div>
-          )}
-
-          {activeSection === "notifications" && (
-            <div className="bg-card rounded-xl border border-border p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6">Notification Preferences</h2>
-              <div className="space-y-4">
-                {[
-                  { label: "New applicant alerts", description: "Get notified when new candidates apply", enabled: true },
-                  { label: "Screening complete", description: "Notification when AI screening finishes", enabled: true },
-                  { label: "Interview reminders", description: "Reminders before scheduled interviews", enabled: true },
-                  { label: "Weekly digest", description: "Summary of hiring activity each week", enabled: false },
-                  { label: "Marketing updates", description: "News and tips from HirePilot", enabled: false },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-                    <div>
-                      <p className="font-medium text-foreground">{item.label}</p>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                    </div>
-                    <Switch defaultChecked={item.enabled} />
-                  </div>
-                ))}
+                    ))
+                )}
               </div>
               <div className="flex justify-end mt-6 pt-6 border-t border-border">
                 <Button onClick={handleSave}>Save Preferences</Button>
@@ -196,14 +212,9 @@ export default function SettingsPage() {
                   </label>
                   <textarea
                     rows={6}
-                    defaultValue={`Hi {{candidate_name}},
-
-Thank you for applying for the {{job_title}} position at {{company_name}}. We were impressed with your background and would love to schedule an interview.
-
-Please select a time that works for you: {{scheduling_link}}
-
-Best regards,
-{{your_name}}`}
+                    value={emailTemplates.invitation}
+                    onChange={(e) => setEmailTemplates({...emailTemplates, invitation: e.target.value})}
+                    placeholder="Enter invitation template..."
                     className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
                 </div>
@@ -213,11 +224,9 @@ Best regards,
                   </label>
                   <textarea
                     rows={4}
-                    defaultValue={`Hi {{candidate_name}},
-
-Thank you for your interest in {{company_name}}. After careful consideration, we've decided to move forward with other candidates.
-
-We appreciate your time and wish you success in your job search.`}
+                    value={emailTemplates.rejection}
+                    onChange={(e) => setEmailTemplates({...emailTemplates, rejection: e.target.value})}
+                    placeholder="Enter rejection template..."
                     className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
                 </div>
@@ -227,44 +236,8 @@ We appreciate your time and wish you success in your job search.`}
               </div>
             </div>
           )}
-
-          {activeSection === "security" && (
-            <div className="bg-card rounded-xl border border-border p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6">Security Settings</h2>
-              <div className="space-y-6">
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Change Password</h3>
-                  <div className="space-y-3">
-                    <input
-                      type="password"
-                      placeholder="Current password"
-                      className="w-full h-10 px-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    <input
-                      type="password"
-                      placeholder="New password"
-                      className="w-full h-10 px-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    <input
-                      type="password"
-                      placeholder="Confirm new password"
-                      className="w-full h-10 px-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between py-4 border-y border-border">
-                  <div>
-                    <p className="font-medium text-foreground">Two-factor authentication</p>
-                    <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-                  </div>
-                  <Button variant="outline">Enable</Button>
-                </div>
-              </div>
-              <div className="flex justify-end mt-6 pt-6 border-t border-border">
-                <Button onClick={handleSave}>Update Security</Button>
-              </div>
-            </div>
-          )}
+          
+          {/* Other sections can remain static UI structure but without dummy data content */}
         </div>
       </div>
     </div>

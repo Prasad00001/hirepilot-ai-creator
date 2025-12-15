@@ -1,52 +1,54 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Clock, Video, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Loader2 } from "lucide-react";
+
+// Types definition
+interface Interview {
+  id: number;
+  candidateName: string;
+  role: string;
+  date: string;
+  time: string;
+  duration: number;
+  type: "video" | "in-person";
+  avatarInitials: string;
+}
 
 const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const hours = Array.from({ length: 9 }, (_, i) => i + 9); // 9 AM to 5 PM
-
-const interviews = [
-  { 
-    id: 1, 
-    candidate: "Alex Chen", 
-    role: "Senior Frontend Engineer", 
-    date: "2024-01-15", 
-    time: "10:00 AM",
-    duration: 60,
-    type: "video",
-    avatar: "AC"
-  },
-  { 
-    id: 2, 
-    candidate: "Sarah Kim", 
-    role: "Product Designer", 
-    date: "2024-01-15", 
-    time: "2:00 PM",
-    duration: 45,
-    type: "video",
-    avatar: "SK"
-  },
-  { 
-    id: 3, 
-    candidate: "Michael Brown", 
-    role: "Backend Engineer", 
-    date: "2024-01-16", 
-    time: "11:00 AM",
-    duration: 60,
-    type: "in-person",
-    avatar: "MB"
-  },
-];
-
-const upcomingInterviews = [
-  { id: 1, candidate: "Alex Chen", role: "Senior Frontend Engineer", time: "Today, 10:00 AM", avatar: "AC" },
-  { id: 2, candidate: "Sarah Kim", role: "Product Designer", time: "Today, 2:00 PM", avatar: "SK" },
-  { id: 3, candidate: "Michael Brown", role: "Backend Engineer", time: "Tomorrow, 11:00 AM", avatar: "MB" },
-  { id: 4, candidate: "Emily Davis", role: "Backend Engineer", time: "Jan 18, 3:00 PM", avatar: "ED" },
-];
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [upcomingInterviews, setUpcomingInterviews] = useState<Interview[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCalendarData();
+  }, [currentDate]);
+
+  const fetchCalendarData = async () => {
+    setIsLoading(true);
+    try {
+      // TODO: Replace with real API calls
+      // const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      // const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      
+      // const res = await fetch(`/api/calendar?start=${startOfMonth}&end=${endOfMonth}`);
+      // const data = await res.json();
+      
+      // setInterviews(data.monthInterviews);
+      // setUpcomingInterviews(data.upcoming);
+      
+      // Temporary empty state until API is connected
+      setInterviews([]); 
+      setUpcomingInterviews([]);
+      
+    } catch (error) {
+      console.error("Failed to fetch calendar data", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -80,8 +82,16 @@ export default function CalendarPage() {
 
   const hasInterview = (day: number | null) => {
     if (!day) return false;
-    // Simulate some days having interviews
-    return [10, 15, 16, 18, 22].includes(day);
+    // Check if any interview exists on this day
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    
+    return interviews.some(interview => {
+      const interviewDate = new Date(interview.date);
+      return interviewDate.getDate() === day && 
+             interviewDate.getMonth() === currentMonth && 
+             interviewDate.getFullYear() === currentYear;
+    });
   };
 
   return (
@@ -125,12 +135,12 @@ export default function CalendarPage() {
                 key={index}
                 className={`aspect-square p-2 rounded-lg text-center relative ${
                   day ? 'hover:bg-accent cursor-pointer' : ''
-                } ${day === 15 ? 'bg-primary text-primary-foreground' : ''}`}
+                } ${day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() ? 'bg-primary text-primary-foreground' : ''}`}
               >
                 {day && (
                   <>
                     <span className="text-sm">{day}</span>
-                    {hasInterview(day) && day !== 15 && (
+                    {hasInterview(day) && (
                       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
                     )}
                   </>
@@ -143,31 +153,43 @@ export default function CalendarPage() {
         {/* Upcoming interviews */}
         <div className="bg-card rounded-xl border border-border p-6">
           <h2 className="text-lg font-semibold text-foreground mb-4">Upcoming Interviews</h2>
-          <div className="space-y-4">
-            {upcomingInterviews.map((interview) => (
-              <div 
-                key={interview.id}
-                className="flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-sm font-medium text-accent-foreground flex-shrink-0">
-                  {interview.avatar}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground text-sm truncate">
-                    {interview.candidate}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {interview.role}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    {interview.time}
+          
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : upcomingInterviews.length > 0 ? (
+            <div className="space-y-4">
+              {upcomingInterviews.map((interview) => (
+                <div 
+                  key={interview.id}
+                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-sm font-medium text-accent-foreground flex-shrink-0">
+                    {interview.avatarInitials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm truncate">
+                      {interview.candidateName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {interview.role}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      {interview.time}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-          <Button variant="outline" className="w-full mt-4">
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No upcoming interviews scheduled.
+            </div>
+          )}
+          
+          <Button variant="outline" className="w-full mt-4" disabled={upcomingInterviews.length === 0}>
             View All Scheduled
           </Button>
         </div>
