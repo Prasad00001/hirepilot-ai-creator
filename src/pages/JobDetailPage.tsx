@@ -1,303 +1,341 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { 
   ArrowLeft, 
-  Sparkles, 
-  Loader2, 
-  FileText
+  Calendar,
+  Mail,
+  Phone,
+  MapPin,
+  FileText,
+  Star,
+  XCircle,
+  Briefcase,
+  Loader2,
+  Sparkles 
 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
-interface Candidate {
+// 1. Define Interface (Updated to handle both formats)
+interface CandidateProfile {
   id: number;
   name: string;
   email: string;
+  phone: string;
+  location: string;
   score: number;
-  matchReason: string;
-  skills: string[];
+  appliedFor: string;
+  experience: string;
+  education: string;
+  summary: string;
+  skills: Array<{ name: string; level: number }>;
+  aiReasoning: Array<{ factor: string; score: number; note: string }>;
+  experience_list: Array<{ title: string; company: string; duration: string }>;
 }
 
-export default function JobDetailPage() {
+export default function CandidateProfilePage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  
+  // 2. State Management
+  const [candidate, setCandidate] = useState<CandidateProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(false); // Controls the "Analyzing" spinner
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
 
-  // State for Job Details
-  const [jobTitle, setJobTitle] = useState("");
-  const [jobSummary, setJobSummary] = useState("");
-  const [jobRequirements, setJobRequirements] = useState("");
+  // 3. YOUR N8N URL (Copied from your chat)
+  const N8N_WEBHOOK_URL = "http://localhost:5678/webhook/9a35b42b-45cc-499b-8fb2-958bc09ab4d6";
 
-  // State for Resume Input
-  const [resumeText, setResumeText] = useState("");
-
-  // State for Screening Process
-  const [isScreening, setIsScreening] = useState(false);
-  const [screeningComplete, setScreeningComplete] = useState(false);
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-
-  // Note: Since dummy data is removed, existing jobs won't auto-populate.
-  // You would typically fetch real job data here if 'id' exists.
+  // 4. Initial Dummy Data (So page is not empty at start)
   useEffect(() => {
-    if (id && id !== "new") {
-      // TODO: Fetch actual job details from your backend API
-      console.log("Should fetch details for job ID:", id);
-    }
+    // In a real app, you would fetch this from your backend based on ID
+    setCandidate({
+      id: 1,
+      name: "Prasad Joshi", // This will update after AI analysis
+      email: "pj160420@gmail.com",
+      phone: "+91 98765 43210",
+      location: "Mumbai, India",
+      score: 0, 
+      appliedFor: "Senior Frontend Engineer",
+      experience: "3 Years",
+      education: "B.Tech in Computer Science",
+      summary: "Waiting for AI analysis...",
+      skills: [
+        { name: "React", level: 90 },
+        { name: "Node.js", level: 85 },
+        { name: "TypeScript", level: 80 }
+      ],
+      aiReasoning: [], // Empty initially
+      experience_list: [
+        { title: "Frontend Developer", company: "Tech Corp", duration: "2021 - Present" },
+        { title: "Jr. Developer", company: "Startup Inc", duration: "2019 - 2021" }
+      ]
+    });
   }, [id]);
 
-  const handleRunScreening = async () => {
-    if (!jobTitle || !resumeText) {
-      toast({
-        variant: "destructive",
-        title: "Missing Information",
-        description: "Please provide both Job Details and Resume text.",
-      });
-      return;
-    }
-
-    setIsScreening(true);
-
-    // Prepare data for the webhook
-    const payload = {
-      jobDescription: {
-        role: jobTitle,
-        summary: jobSummary,
-        requirements: jobRequirements.split('\n').filter(line => line.trim() !== '')
-      },
-      resumes: [resumeText] // Sending as an array to match previous structure
-    };
-
+  // 5. Function to Call n8n
+  const handleAnalyzeProfile = async () => {
+    if (!candidate) return;
+    
+    setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:5678/webhook-test/9a35b42b-45cc-499b-8fb2-958bc09ab4d6', {
-        method: 'POST',
+      // Data to send to AI
+      const payload = {
+        resume: "Candidate demonstrates strong experience in Node.js, Express.js, MongoDB...", // Replace with actual resume text
+        jd: "Senior Frontend Engineer with 3+ years experience in React..." // Replace with actual JD
+      };
+
+      const response = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      // Parse the REAL data from the webhook
       const data = await response.json();
-      
-      // Assumes your webhook returns an object with a 'candidates' array
-      // Example structure: { candidates: [{ name: "...", score: 90, ... }] }
-      if (data && data.candidates) {
-        setCandidates(data.candidates);
-        setScreeningComplete(true);
-        toast({
-          title: "Screening complete!",
-          description: `Found ${data.candidates.length} candidates.`,
-        });
-      } else {
-        // Fallback if structure is different
-        console.warn("Unexpected response structure:", data);
-        setCandidates([]);
-        setScreeningComplete(true);
-        toast({
-          variant: "destructive",
-          title: "Format Error",
-          description: "Received data format was not as expected.",
-        });
-      }
+      console.log("n8n Response:", data);
+
+      // Update UI with new data
+      setCandidate(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          name: data.name || prev.name,
+          score: parseInt(data.score) || 0,
+          aiReasoning: [
+            {
+              factor: "Overall Match Analysis",
+              score: parseInt(data.score) || 0,
+              note: data.matchReason || "No reasoning provided."
+            }
+          ]
+        };
+      });
 
     } catch (error) {
-      console.error("Error running screening:", error);
-      toast({
-        variant: "destructive",
-        title: "Screening failed",
-        description: "There was an error connecting to the screening service.",
-      });
+      console.error("Error connecting to n8n:", error);
+      alert("Connection Failed! Is your n8n workflow active?");
     } finally {
-      setIsScreening(false);
+      setIsLoading(false);
     }
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 85) return "score-high";
-    if (score >= 70) return "score-medium";
-    return "score-low";
+    if (score >= 85) return "text-emerald-600 bg-emerald-100";
+    if (score >= 70) return "text-amber-600 bg-amber-100";
+    return "text-red-600 bg-red-100";
   };
 
+  if (!candidate) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="content-container fade-in">
+    <div className="content-container fade-in p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => navigate("/jobs")}
-          aria-label="Go back to jobs"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">
-            {id === "new" ? "New Job Posting" : jobTitle || "Job Details"}
-          </h1>
-          <p className="text-muted-foreground">
-            {id === "new" ? "Create a new job and screen candidates" : "Manage job details and screening"}
-          </p>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">
+              {candidate.name}
+            </h1>
+            <p className="text-muted-foreground">
+              Applied for {candidate.appliedFor}
+            </p>
+          </div>
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* AI Button */}
+          <Button 
+            onClick={handleAnalyzeProfile} 
+            disabled={isLoading}
+            className="gap-2 bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            {isLoading ? "Analyzing..." : "Analyze with AI"}
+          </Button>
+
+          <Button variant="outline" className="gap-2 hidden sm:flex">
+            <XCircle className="w-4 h-4" />
+            Reject
+          </Button>
+          <Button onClick={() => setIsScheduleOpen(true)} className="gap-2 w-full sm:w-auto">
+            <Calendar className="w-4 h-4" />
+            Schedule
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column - Job Details & Resume Input */}
+        {/* Left column - Profile info */}
         <div className="space-y-6">
-          
-          {/* Job Details Form */}
-          <div className="bg-card rounded-xl border border-border p-6 space-y-4">
-            <h2 className="font-semibold text-foreground mb-2">Job Description</h2>
-            
-            <div className="space-y-2">
-              <Label htmlFor="jobTitle">Job Title</Label>
-              <Input 
-                id="jobTitle" 
-                placeholder="e.g. Senior Frontend Engineer" 
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-              />
+          {/* Score Card */}
+          <div className="bg-card rounded-xl border border-border p-6 text-center shadow-sm">
+            <div className={`inline-flex items-center justify-center w-24 h-24 rounded-2xl text-4xl font-bold transition-all duration-500 ${getScoreColor(candidate.score)}`}>
+              {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : candidate.score}
             </div>
+            <p className="mt-4 text-sm font-medium text-foreground">AI Match Score</p>
+            {candidate.score > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">Based on Resume & JD</p>
+            )}
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="jobSummary">Summary</Label>
-              <Textarea 
-                id="jobSummary" 
-                placeholder="Brief overview of the role..." 
-                className="min-h-[100px]"
-                value={jobSummary}
-                onChange={(e) => setJobSummary(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="jobRequirements">Requirements (one per line)</Label>
-              <Textarea 
-                id="jobRequirements" 
-                placeholder="- React Experience&#10;- TypeScript&#10;- Team player" 
-                className="min-h-[120px]"
-                value={jobRequirements}
-                onChange={(e) => setJobRequirements(e.target.value)}
-              />
+          {/* Contact Info */}
+          <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+            <h2 className="font-semibold text-foreground mb-4">Contact</h2>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground">{candidate.email}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <Phone className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground">{candidate.phone}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <MapPin className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground">{candidate.location}</span>
+              </div>
             </div>
           </div>
 
-          {/* Paste Resume Section */}
-          <div className="bg-card rounded-xl border border-border p-6">
-            <h2 className="font-semibold text-foreground mb-4">Candidate Resume</h2>
-            
-            <div className="space-y-2">
-              <Label htmlFor="resumeText">Paste Resume Text</Label>
-              <Textarea 
-                id="resumeText" 
-                placeholder="Paste the full text of the candidate's resume here..."
-                className="min-h-[200px] font-mono text-sm"
-                value={resumeText}
-                onChange={(e) => setResumeText(e.target.value)}
-              />
+          {/* Experience List */}
+          <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+            <h2 className="font-semibold text-foreground mb-4">Experience</h2>
+            <div className="space-y-4">
+              {candidate.experience_list.map((exp, index) => (
+                <div key={index} className="flex gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center flex-shrink-0">
+                    <Briefcase className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-foreground">{exp.title}</p>
+                    <p className="text-xs text-muted-foreground">{exp.company}</p>
+                    <p className="text-xs text-muted-foreground">{exp.duration}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <Button 
-              onClick={handleRunScreening}
-              disabled={!resumeText || !jobTitle || isScreening}
-              className="w-full mt-4 gap-2"
-              size="lg"
-            >
-              {isScreening ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Running AI screening...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Compare with AI
-                </>
-              )}
-            </Button>
           </div>
         </div>
 
-        {/* Right column - Results */}
-        <div className="lg:col-span-2">
-          <div className="bg-card rounded-xl border border-border p-6 min-h-[600px]">
-            <h2 className="font-semibold text-foreground mb-4">
-              {screeningComplete ? "Screening Results" : "Analysis Output"}
-            </h2>
-
-            {!screeningComplete && candidates.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center h-full">
-                <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center mb-4">
-                  <FileText className="w-8 h-8 text-accent-foreground" />
+        {/* Right column - Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* AI Reasoning Section */}
+          <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="w-5 h-5 text-purple-600" />
+              <h2 className="font-semibold text-foreground">AI Analysis Report</h2>
+            </div>
+            <div className="space-y-4">
+              {candidate.aiReasoning.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground bg-secondary/20 rounded-lg">
+                  <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>Click "Analyze with AI" to generate a detailed report.</p>
                 </div>
-                <h3 className="font-medium text-foreground mb-2">
-                  Ready to Screen
-                </h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  Enter the job details and paste a resume to start the AI comparison.
-                </p>
-              </div>
-            ) : isScreening ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center mb-4">
-                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                </div>
-                <h3 className="font-medium text-foreground mb-2">
-                  Running AI Analysis
-                </h3>
-                <p className="text-sm text-muted-foreground pulse-subtle">
-                  Comparing resume against job requirements...
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {candidates.length > 0 ? (
-                  candidates.map((candidate, index) => (
-                    <div 
-                      key={candidate.id || index}
-                      onClick={() => navigate(`/candidates/${candidate.id}`)}
-                      className="flex items-start gap-4 p-4 rounded-lg bg-secondary/50 hover:bg-secondary cursor-pointer transition-colors animate-fade-in"
-                      style={{ animationDelay: `${index * 100}ms` }}
-                    >
-                      <div className={`score-badge ${getScoreColor(candidate.score)}`}>
-                        {candidate.score}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium text-foreground">{candidate.name}</h3>
-                          <span className="text-xs text-muted-foreground">{candidate.email}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {candidate.matchReason}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {candidate.skills && candidate.skills.map((skill) => (
-                            <span 
-                              key={skill}
-                              className="px-2 py-0.5 bg-accent text-accent-foreground text-xs rounded-md"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+              ) : (
+                candidate.aiReasoning.map((item, index) => (
+                  <div key={index} className="flex items-start gap-4 p-4 bg-secondary/10 rounded-lg border border-border/50">
+                    <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm shrink-0 ${getScoreColor(item.score)}`}>
+                      {item.score}
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-10 text-muted-foreground">
-                    No matching candidates found in the response.
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-foreground mb-1">{item.factor}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {item.note}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Skills Section */}
+          <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+            <h2 className="font-semibold text-foreground mb-4">Skills Assessment</h2>
+            <div className="space-y-4">
+              {candidate.skills.map((skill) => (
+                <div key={skill.name}>
+                  <div className="flex justify-between text-sm mb-1.5">
+                    <span className="font-medium text-foreground">{skill.name}</span>
+                    <span className="text-muted-foreground">{skill.level}%</span>
+                  </div>
+                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary rounded-full transition-all duration-500"
+                      style={{ width: `${skill.level}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Resume Summary */}
+          <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-foreground">Resume Summary</h2>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <FileText className="w-4 h-4" />
+                View PDF
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {candidate.summary}
+            </p>
           </div>
         </div>
       </div>
+
+      {/* Schedule Interview Sheet */}
+      <Sheet open={isScheduleOpen} onOpenChange={setIsScheduleOpen}>
+        <SheetContent className="w-full sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>Schedule Interview</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-6">
+            <div>
+              <h3 className="text-sm font-medium text-foreground mb-3">Suggested Times</h3>
+              <div className="space-y-2">
+                {["Tomorrow, 10:00 AM", "Tomorrow, 2:00 PM", "Friday, 11:00 AM"].map((time, index) => (
+                  <button
+                    key={index}
+                    className="w-full p-4 text-left rounded-lg border border-border hover:border-primary hover:bg-accent transition-colors"
+                    onClick={() => navigate("/confirmation")}
+                  >
+                    <p className="font-medium text-foreground">{time}</p>
+                    <p className="text-xs text-muted-foreground mt-1">30 min video call</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
